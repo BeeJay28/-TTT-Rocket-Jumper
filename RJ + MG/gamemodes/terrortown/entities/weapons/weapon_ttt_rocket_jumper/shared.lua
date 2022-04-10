@@ -59,6 +59,7 @@ local FallDamageDenyCheckInterval = 0.1
 
 --- Helper variables
 local ShouldDenyFallDamage = false
+local CollisionDmgFlagId = 0
 
 -- Make sure these two are equal to their lua-filenames
 local jumper_weapon_string = "weapon_ttt_rocket_jumper"
@@ -127,6 +128,8 @@ function SWEP:PrimaryAttack()
 
          self:SetNextPrimaryFire( CurTime() + self:SequenceDuration() + 0.1)
 
+         CollisionDmgFlagId = self:GetPhysicsObject():AddGameFlag(FVPHYSICS_NO_IMPACT_DMG) -- Removes Collision Damage with other players while airborne
+
          AddHooksForAttack(ply)
          ShouldDenyFallDamage = true
 
@@ -179,8 +182,7 @@ function SWEP:Think()
       if ShouldDenyFallDamage and self:GetNextFallDamageDenyCheck() < CurTime() then
          local ply = self:GetOwner()
          if ply:OnGround() or ply:WaterLevel() ~= 0 then
-            hook.Remove("EntityTakeDamage", "rocket_jumper__NoFallDamage")
-            ShouldDenyFallDamage = false
+            OnHittingFloor()
          end
       end
       self:SetNextFallDamageDenyCheck(CurTime() + FallDamageDenyCheckInterval)
@@ -193,8 +195,14 @@ function AddHooksForAttack(ply)
    --BUG: On some maps you take damage despite this hook
    hook.Add("EntityTakeDamage", "rocket_jumper__NoFallDamage", function(target, dmgInfo)
       if(ply == target and dmgInfo:IsFallDamage()) then
-         hook.Remove("EntityTakeDamage", "rocket_jumper__NoFallDamage")
+         OnHittingFloor()
          dmgInfo:SetDamage(0)
       end
    end )
+end
+
+function OnHittingFloor()
+   hook.Remove("EntityTakeDamage", "rocket_jumper__NoFallDamage")
+   ShouldDenyFallDamage = false
+   self:GetPhysicsObject():ClearGameFlag(FVPHYSICS_NO_IMPACT_DMG)
 end
