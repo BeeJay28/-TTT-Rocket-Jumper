@@ -65,6 +65,8 @@ local jumper_weapon_string = "weapon_ttt_rocket_jumper"
 local melee_weapon_string = "weapon_ttt_market_gardener"
 
 
+-- BUG: If the player hits the enemy at a high enough velocity, he can damage/kill them as a physics object. Works well as goomba stomps
+
 
 --- TTT config values
 

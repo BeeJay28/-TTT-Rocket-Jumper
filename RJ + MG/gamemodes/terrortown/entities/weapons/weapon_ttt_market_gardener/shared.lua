@@ -52,7 +52,7 @@ local melee_weapon_string = "weapon_ttt_market_gardener"
 local hitbox_range = 120
 local damageValue = 1000
 local dropCheckInterval = 0.1
-local meleeSwingDelay = 0.2
+local meleeSwingDelay = 0.05
  
  
 --- TTT config values
@@ -129,20 +129,17 @@ function SWEP:PrimaryAttack()
 
     local ent = tr.Entity
 
-    local damageHitEntity = function ()
-        self:EmitSound(self.Primary.HitSound)
-
-        ent:SetHealth(ent:Health() - damageValue)
-        if(ent:Health() < 1) then
-        ent:Kill()
-        end
-    end
-
     if(IsValid(ent) and (ent:IsPlayer() or ent:IsNPC())) then
         self.Weapon:SendWeaponAnim(ACT_VM_HITCENTER)
         ply:SetAnimation(PLAYER_ATTACK1)
 
-        timer.Simple(meleeSwingDelay, damageHitEntity)
+        timer.Simple(meleeSwingDelay, function ()
+            ent:SetHealth(ent:Health() - damageValue)
+            if(ent:Health() < 1) then
+            ent:Kill()
+            end
+        end)
+        self:EmitSound(self.Primary.HitSound)
 
     elseif(not IsValid(ent)) then
         self.Weapon:SendWeaponAnim(ACT_VM_MISSCENTER)
