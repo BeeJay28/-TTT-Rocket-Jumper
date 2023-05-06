@@ -174,7 +174,7 @@ function SWEP:Think()
       if ShouldDenyFallDamage and self:GetNextFallDamageDenyCheck() < CurTime() then
          local ply = self:GetOwner()
          if ply:OnGround() or ply:WaterLevel() ~= 0 then
-            OnHittingFloor(ply)
+          RemoveFallDamageMitigation(ply)
          end
       end
       self:SetNextFallDamageDenyCheck(CurTime() + FallDamageDenyCheckInterval)
