@@ -171,10 +171,18 @@ function SWEP:Initialize()
             ply:Give(jumper_weapon_string)
         end
     end)
-    hook.Add("TTT2PostPlayerDeath", "market_gardener__DropMeleeOnDeath", function (victim, inflictor, attacker)
+    hook.Add("DoPlayerDeath", "market_gardener__DropMeleeOnDeath", function (ply, attacker, dmg)
       if CLIENT then return end
-      if self:GetOwner() == victim then
-        hook.Remove("TTT2PostPlayerDeath", "market_gardener__DropMeleeOnDeath")
+      if self:GetOwner() == ply then
+        hook.Remove("DoPlayerDeath", "market_gardener__DropMeleeOnDeath")
+        hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+        self:GetOwner():StripWeapon(melee_weapon_string)
+      end
+    end)
+    hook.Add("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath", function (ply)
+      if CLIENT then return end
+      if self:GetOwner() == ply then
+        hook.Remove("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath")
         hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
         self:GetOwner():StripWeapon(melee_weapon_string)
       end
