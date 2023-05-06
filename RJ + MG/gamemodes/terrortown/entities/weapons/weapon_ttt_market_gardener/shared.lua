@@ -134,6 +134,16 @@ function SWEP:PrimaryAttack()
         ply:SetAnimation(PLAYER_ATTACK1)
 
         timer.Simple(meleeSwingDelay, function ()
+            -- TODO: Add dmgInfo object to supply more information about the kill. Example:
+            -- local dmg = DamageInfo()
+            -- dmg:SetDamage(self.Primary.Damage)
+            -- dmg:SetAttacker(self.Owner)
+            -- dmg:SetInflictor(self.Weapon or self)
+            -- dmg:SetDamageForce(self.Owner:GetAimVector() * 5)
+            -- dmg:SetDamagePosition(self.Owner:GetPos())
+            -- dmg:SetDamageType(DMG_SLASH)
+
+            -- hitEnt:DispatchTraceAttack(dmg, spos + (self.Owner:GetAimVector() * 3), sdest)
             ent:SetHealth(ent:Health() - damageValue)
             if(ent:Health() < 1) then
             ent:Kill()
