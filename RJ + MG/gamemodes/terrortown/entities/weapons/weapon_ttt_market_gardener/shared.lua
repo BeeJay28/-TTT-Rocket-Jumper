@@ -81,7 +81,7 @@ SWEP.InLoadoutFor = nil
 SWEP.LimitedStock = false
 
 -- If AllowDrop is false, players can't manually drop the gun with Q
-SWEP.AllowDrop = false -- DEBUG! Change to false
+SWEP.AllowDrop = false
 
 -- If IsSilent is true, victims will not scream upon death.
 SWEP.IsSilent = false
@@ -134,6 +134,16 @@ function SWEP:PrimaryAttack()
         ply:SetAnimation(PLAYER_ATTACK1)
 
         timer.Simple(meleeSwingDelay, function ()
+            -- TODO: Add dmgInfo object to supply more information about the kill. Example:
+            -- local dmg = DamageInfo()
+            -- dmg:SetDamage(self.Primary.Damage)
+            -- dmg:SetAttacker(self.Owner)
+            -- dmg:SetInflictor(self.Weapon or self)
+            -- dmg:SetDamageForce(self.Owner:GetAimVector() * 5)
+            -- dmg:SetDamagePosition(self.Owner:GetPos())
+            -- dmg:SetDamageType(DMG_SLASH)
+
+            -- hitEnt:DispatchTraceAttack(dmg, spos + (self.Owner:GetAimVector() * 3), sdest)
             ent:SetHealth(ent:Health() - damageValue)
             if(ent:Health() < 1) then
             ent:Kill()
@@ -162,19 +172,41 @@ function SWEP:SetupDataTables()
 end
 
 function SWEP:Initialize()
-	self:SetNextDropCheck( CurTime() + 0.1)
+	self:SetNextDropCheck( CurTime() + 0.1 )
+  local owner = self:GetOwner()
     hook.Add("OnPlayerHitGround", "market_gardener__DropMeleeOnFall", function(ply, inWater, onFloater, speed)
         if CLIENT then return end
-        if self:GetOwner() == ply then
+        if owner == ply then
             hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
             ply:StripWeapon(melee_weapon_string)
             ply:Give(jumper_weapon_string)
         end
     end)
+    hook.Add("DoPlayerDeath", "market_gardener__DropMeleeOnDeath", function (ply, attacker, dmg)
+      if CLIENT then return end
+      if owner == ply then
+        hook.Remove("DoPlayerDeath", "market_gardener__DropMeleeOnDeath")
+        hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+        self:GetOwner():StripWeapon(melee_weapon_string)
+      end
+    end)
+    hook.Add("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath", function (ply)
+      if CLIENT then return end
+      if owner == ply then
+        hook.Remove("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath")
+        hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+        owner:StripWeapon(melee_weapon_string)
+      end
+    end)
+    hook.Add("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd", function (result)
+      if CLIENT then return end
+      hook.Remove("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd")
+      hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+    end)
 end
 
 function SWEP:Think()
-    ShouldDropMelee(self, self:GetOwner())
+    ShouldStripMelee(self, self:GetOwner())
 end
 
 function SWEP:Deploy()
@@ -183,7 +215,7 @@ function SWEP:Deploy()
     end
 end
 
-function ShouldDropMelee(wep, ply)
+function ShouldStripMelee(wep, ply)
     if SERVER and wep:GetNextDropCheck() < CurTime() then
         if ply:OnGround() or ply:WaterLevel() ~= 0 then
             ply:StripWeapon(melee_weapon_string)
