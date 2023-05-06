@@ -171,10 +171,24 @@ function SWEP:Initialize()
             ply:Give(jumper_weapon_string)
         end
     end)
+    hook.Add("TTT2PostPlayerDeath", "market_gardener__DropMeleeOnDeath", function (victim, inflictor, attacker)
+      if CLIENT then return end
+      if self:GetOwner() == victim then
+        hook.Remove("TTT2PostPlayerDeath", "market_gardener__DropMeleeOnDeath")
+        hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+        self:GetOwner():StripWeapon(melee_weapon_string)
+      end
+    end)
+    hook.Add("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd", function (result)
+      if CLIENT then return end
+      hook.Remove("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd")
+      hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+      self:GetOwner():StripWeapon(melee_weapon_string)
+    end)
 end
 
 function SWEP:Think()
-    ShouldDropMelee(self, self:GetOwner())
+    ShouldStripMelee(self, self:GetOwner())
 end
 
 function SWEP:Deploy()
@@ -183,7 +197,7 @@ function SWEP:Deploy()
     end
 end
 
-function ShouldDropMelee(wep, ply)
+function ShouldStripMelee(wep, ply)
     if SERVER and wep:GetNextDropCheck() < CurTime() then
         if ply:OnGround() or ply:WaterLevel() ~= 0 then
             ply:StripWeapon(melee_weapon_string)
