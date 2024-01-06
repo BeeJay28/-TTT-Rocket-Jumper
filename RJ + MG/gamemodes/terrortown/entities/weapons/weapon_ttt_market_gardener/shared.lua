@@ -118,7 +118,7 @@ function SWEP:PrimaryAttack()
         maxs = t_max
     } )
 
-    if( not IsValid(tr.Entity)) then
+    if( not IsValid(tr.Entity) ) then
         tr = util.TraceLine( {
         start = shoot_pos,
         endpos = end_shoot_pos,
@@ -127,31 +127,28 @@ function SWEP:PrimaryAttack()
         } )
     end
 
-    local ent = tr.Entity
+    local hitEnt = tr.Entity
 
-    if(IsValid(ent) and (ent:IsPlayer() or ent:IsNPC())) then
-        self.Weapon:SendWeaponAnim(ACT_VM_HITCENTER)
+    if(IsValid(hitEnt) and (hitEnt:IsPlayer() or hitEnt:IsNPC())) then
+        self:SendWeaponAnim(ACT_VM_HITCENTER)
         ply:SetAnimation(PLAYER_ATTACK1)
 
-        timer.Simple(meleeSwingDelay, function ()
-            -- TODO: Add dmgInfo object to supply more information about the kill. Example:
-            -- local dmg = DamageInfo()
-            -- dmg:SetDamage(self.Primary.Damage)
-            -- dmg:SetAttacker(self.Owner)
-            -- dmg:SetInflictor(self.Weapon or self)
-            -- dmg:SetDamageForce(self.Owner:GetAimVector() * 5)
-            -- dmg:SetDamagePosition(self.Owner:GetPos())
-            -- dmg:SetDamageType(DMG_SLASH)
-
-            -- hitEnt:DispatchTraceAttack(dmg, spos + (self.Owner:GetAimVector() * 3), sdest)
-            ent:SetHealth(ent:Health() - damageValue)
-            if(ent:Health() < 1) then
-            ent:Kill()
-            end
-        end)
+        if SERVER then
+            timer.Simple(meleeSwingDelay, function ()
+                local dmg = DamageInfo()
+                dmg:SetDamage(damageValue)
+                dmg:SetAttacker(ply)
+                if IsValid(self) then dmg:SetInflictor(self) end
+                dmg:SetDamageForce(ply:GetAimVector() * 5)
+                dmg:SetDamagePosition(ply:GetPos())
+                dmg:SetDamageType(DMG_CLUB)
+    
+                hitEnt:TakeDamageInfo(dmg)
+            end)
+        end
         self:EmitSound(self.Primary.HitSound)
 
-    elseif(not IsValid(ent)) then
+    elseif(not IsValid(hitEnt)) then
         self.Weapon:SendWeaponAnim(ACT_VM_MISSCENTER)
         ply:SetAnimation(PLAYER_ATTACK1)
 
@@ -173,7 +170,7 @@ end
 
 function SWEP:Initialize()
 	self:SetNextDropCheck( CurTime() + 0.1 )
-  local owner = self:GetOwner()
+    local owner = self:GetOwner()
     hook.Add("OnPlayerHitGround", "market_gardener__DropMeleeOnFall", function(ply, inWater, onFloater, speed)
         if CLIENT then return end
         if owner == ply then
