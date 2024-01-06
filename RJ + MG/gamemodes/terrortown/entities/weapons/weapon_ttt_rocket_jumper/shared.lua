@@ -199,8 +199,8 @@ function AddHooksForAttack(ply)
     end
   end)
 
-  hook.Add("TTTEndRound", "rocketJumper__RemoveFallDamageMitigationRoundEnd", function(result)
-    hook.Remove("TTTEndRound", "rocketJumper__RemoveFallDamageMitigationRoundEnd")
+  hook.Add("TTTBeginRound", "rocketJumper__RemoveFallDamageMitigationRoundEnd", function(result)
+    hook.Remove("TTTBeginRound", "rocketJumper__RemoveFallDamageMitigationRoundEnd")
     RemoveFallDamageMitigation()
   end)
 end

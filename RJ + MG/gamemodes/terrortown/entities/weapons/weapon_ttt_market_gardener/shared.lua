@@ -194,9 +194,8 @@ function SWEP:Initialize()
             owner:StripWeapon(meleeWeaponString)
         end
     end)
-    hook.Add("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd", function (result)
-        if CLIENT then return end
-        hook.Remove("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd")
+    hook.Add("TTTBeginRound", "market_gardener__DropMeleeOnRoundEnd", function (result)
+        hook.Remove("TTTBeginRound", "market_gardener__DropMeleeOnRoundEnd")
         hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
     end)
 end
