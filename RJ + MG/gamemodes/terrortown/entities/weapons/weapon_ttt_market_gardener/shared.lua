@@ -41,15 +41,15 @@ SWEP.ViewModel  = "models/weapons/c_crowbar.mdl"
 SWEP.WorldModel = "models/weapons/w_crowbar.mdl"
  
 
-SWEP.Primary.HitSound = Sound( "Critical_Hit.mp3" )
-SWEP.Primary.MissSound = Sound( "Weapon_Crowbar.Single" ) 
+SWEP.Primary.HitSound = Sound("Critical_Hit.mp3")
+SWEP.Primary.MissSound = Sound("Weapon_Crowbar.Single") 
 
  -- Make sure these two are equal to their lua-filenames
-local jumper_weapon_string = "weapon_ttt_rocket_jumper"
-local melee_weapon_string = "weapon_ttt_market_gardener"
+local jumperWeaponString = "weapon_ttt_rocket_jumper"
+local meleeWeaponString = "weapon_ttt_market_gardener"
 
 --- Parameters
-local hitbox_range = 120
+local hitboxRange = 120
 local damageValue = 1000
 local dropCheckInterval = 0.1
 local meleeSwingDelay = 0.05
@@ -104,32 +104,32 @@ function SWEP:PrimaryAttack()
     
     ply:LagCompensation(true)
 
-    local shoot_pos = ply:GetShootPos()
-    local end_shoot_pos = (ply:GetAimVector() * hitbox_range) + shoot_pos
-    local t_min = Vector( 1, 1, 1 ) * -10
-    local t_max = Vector( 1, 1, 1 ) * 10
+    local shootPos = ply:GetShootPos()
+    local endShootPos = (ply:GetAimVector() * hitboxRange) + shootPos
+    local tMin = Vector(1, 1, 1) * -10
+    local tMax = Vector(1, 1, 1) * 10
     
-    local tr = util.TraceHull( {
-        start = shoot_pos,
-        endpos = end_shoot_pos,
+    local tr = util.TraceHull({
+        start = shootPos,
+        endpos = endShootPos,
         filter = ply,
         mask = MASK_SHOT_HULL,
-        mins = t_min,
-        maxs = t_max
-    } )
+        mins = tMin,
+        maxs = tMax
+    })
 
-    if( not IsValid(tr.Entity) ) then
-        tr = util.TraceLine( {
-        start = shoot_pos,
-        endpos = end_shoot_pos,
+    if not IsValid(tr.Entity) then
+        tr = util.TraceLine({
+        start = shootPos,
+        endpos = endShootPos,
         mask = MASK_SHOT_HULL,
         filter = ply
-        } )
+        })
     end
 
     local hitEnt = tr.Entity
 
-    if(IsValid(hitEnt) and (hitEnt:IsPlayer() or hitEnt:IsNPC())) then
+    if (IsValid(hitEnt) and (hitEnt:IsPlayer() or hitEnt:IsNPC())) then
         self:SendWeaponAnim(ACT_VM_HITCENTER)
         ply:SetAnimation(PLAYER_ATTACK1)
 
@@ -148,57 +148,57 @@ function SWEP:PrimaryAttack()
         end
         self:EmitSound(self.Primary.HitSound)
 
-    elseif(not IsValid(hitEnt)) then
-        self.Weapon:SendWeaponAnim(ACT_VM_MISSCENTER)
+    elseif not IsValid(hitEnt) then
+        self:SendWeaponAnim(ACT_VM_MISSCENTER)
         ply:SetAnimation(PLAYER_ATTACK1)
 
         self:EmitSound(self.Primary.MissSound)
     end
     local delay = self:SequenceDuration()
-    self:SetNextPrimaryFire( CurTime() + delay + 0.1)
+    self:SetNextPrimaryFire(CurTime() + delay + 0.1)
 
     ply:LagCompensation(false)
 end
 
 function SWEP:Equip(newOwner)
-    newOwner:SelectWeapon(melee_weapon_string)
+    newOwner:SelectWeapon(meleeWeaponString)
 end
 
 function SWEP:SetupDataTables()
-	self:NetworkVar( "Float" , 0 , "NextDropCheck" )
+	self:NetworkVar("Float" , 0 , "NextDropCheck")
 end
 
 function SWEP:Initialize()
-	self:SetNextDropCheck( CurTime() + 0.1 )
+	self:SetNextDropCheck(CurTime() + 0.1)
     local owner = self:GetOwner()
     hook.Add("OnPlayerHitGround", "market_gardener__DropMeleeOnFall", function(ply, inWater, onFloater, speed)
         if CLIENT then return end
         if owner == ply then
             hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
-            ply:StripWeapon(melee_weapon_string)
-            ply:Give(jumper_weapon_string)
+            ply:StripWeapon(meleeWeaponString)
+            ply:Give(jumperWeaponString)
         end
     end)
     hook.Add("DoPlayerDeath", "market_gardener__DropMeleeOnDeath", function (ply, attacker, dmg)
-      if CLIENT then return end
-      if owner == ply then
-        hook.Remove("DoPlayerDeath", "market_gardener__DropMeleeOnDeath")
-        hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
-        self:GetOwner():StripWeapon(melee_weapon_string)
-      end
+        if CLIENT then return end
+        if owner == ply then
+            hook.Remove("DoPlayerDeath", "market_gardener__DropMeleeOnDeath")
+            hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+            owner:StripWeapon(meleeWeaponString)
+        end
     end)
     hook.Add("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath", function (ply)
-      if CLIENT then return end
-      if owner == ply then
-        hook.Remove("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath")
-        hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
-        owner:StripWeapon(melee_weapon_string)
-      end
+        if CLIENT then return end
+        if owner == ply then
+            hook.Remove("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath")
+            hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+            owner:StripWeapon(meleeWeaponString)
+        end
     end)
     hook.Add("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd", function (result)
-      if CLIENT then return end
-      hook.Remove("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd")
-      hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+        if CLIENT then return end
+        hook.Remove("TTTEndRound", "market_gardener__DropMeleeOnRoundEnd")
+        hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
     end)
 end
 
@@ -215,8 +215,8 @@ end
 function ShouldStripMelee(wep, ply)
     if SERVER and wep:GetNextDropCheck() < CurTime() then
         if ply:OnGround() or ply:WaterLevel() ~= 0 then
-            ply:StripWeapon(melee_weapon_string)
-            ply:Give(jumper_weapon_string)
+            ply:StripWeapon(meleeWeaponString)
+            ply:Give(jumperWeaponString)
         else
             wep:SetNextDropCheck(CurTime() + dropCheckInterval)
         end
