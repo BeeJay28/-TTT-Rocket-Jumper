@@ -53,7 +53,9 @@ local hitboxRange = 120
 local damageValue = 1000
 local dropCheckInterval = 0.1
 local meleeSwingDelay = 0.05
- 
+
+-- helper params
+local owner = nil
  
 --- TTT config values
 
@@ -165,22 +167,20 @@ function SWEP:Equip(newOwner)
 end
 
 function SWEP:SetupDataTables()
-	self:NetworkVar("Float" , 0 , "NextDropCheck")
+	self:NetworkVar("Float", 0, "NextDropCheck")
 end
 
 function SWEP:Initialize()
+    SendPlayerIndexToServer()
 	self:SetNextDropCheck(CurTime() + 0.1)
-    local owner = self:GetOwner()
     hook.Add("OnPlayerHitGround", "market_gardener__DropMeleeOnFall", function(ply, inWater, onFloater, speed)
-        if CLIENT then return end
         if owner == ply then
             hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
-            ply:StripWeapon(meleeWeaponString)
-            ply:Give(jumperWeaponString)
+            owner:StripWeapon(meleeWeaponString)
+            owner:Give(jumperWeaponString)
         end
     end)
     hook.Add("DoPlayerDeath", "market_gardener__DropMeleeOnDeath", function (ply, attacker, dmg)
-        if CLIENT then return end
         if owner == ply then
             hook.Remove("DoPlayerDeath", "market_gardener__DropMeleeOnDeath")
             hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
@@ -188,7 +188,6 @@ function SWEP:Initialize()
         end
     end)
     hook.Add("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath", function (ply)
-        if CLIENT then return end
         if owner == ply then
             hook.Remove("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath")
             hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
@@ -203,13 +202,29 @@ function SWEP:Initialize()
 end
 
 function SWEP:Think()
-    ShouldStripMelee(self, self:GetOwner())
+    if SERVER then
+        ShouldStripMelee(self, owner)
+    end
 end
 
 function SWEP:Deploy()
     if SERVER then
         self:SetNextPrimaryFire(CurTime() + dropCheckInterval*3)
     end
+end
+
+function SendPlayerIndexToServer()
+    if CLIENT then
+        net.Start("market_gardener__PlayerIndex")
+        net.WriteUInt(LocalPlayer():EntIndex(), 32)
+        net.SendToServer()
+        return
+    end
+
+    util.AddNetworkString("market_gardener__PlayerIndex")
+    net.Receive("market_gardener__PlayerIndex", function (len, ply)
+        owner = Entity(net.ReadUInt(32))
+    end)
 end
 
 function ShouldStripMelee(wep, ply)
