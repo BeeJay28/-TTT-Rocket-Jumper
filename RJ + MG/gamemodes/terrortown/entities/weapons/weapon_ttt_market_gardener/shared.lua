@@ -173,31 +173,6 @@ end
 function SWEP:Initialize()
     SendPlayerIndexToServer()
 	self:SetNextDropCheck(CurTime() + 0.1)
-    hook.Add("OnPlayerHitGround", "market_gardener__DropMeleeOnFall", function(ply, inWater, onFloater, speed)
-        if owner == ply then
-            hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
-            owner:StripWeapon(meleeWeaponString)
-            owner:Give(jumperWeaponString)
-        end
-    end)
-    hook.Add("DoPlayerDeath", "market_gardener__DropMeleeOnDeath", function (ply, attacker, dmg)
-        if owner == ply then
-            hook.Remove("DoPlayerDeath", "market_gardener__DropMeleeOnDeath")
-            hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
-            owner:StripWeapon(meleeWeaponString)
-        end
-    end)
-    hook.Add("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath", function (ply)
-        if owner == ply then
-            hook.Remove("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath")
-            hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
-            owner:StripWeapon(meleeWeaponString)
-        end
-    end)
-    hook.Add("TTTBeginRound", "market_gardener__DropMeleeOnRoundEnd", function (result)
-        hook.Remove("TTTBeginRound", "market_gardener__DropMeleeOnRoundEnd")
-        hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
-    end)
 end
 
 function SWEP:Think()
@@ -212,7 +187,7 @@ function SWEP:Deploy()
     end
 end
 
-function SendPlayerIndexToServer()
+local function SendPlayerIndexToServer()
     if CLIENT then
         net.Start("market_gardener__PlayerIndex")
         net.WriteUInt(LocalPlayer():EntIndex(), 32)
@@ -226,7 +201,7 @@ function SendPlayerIndexToServer()
     end)
 end
 
-function ShouldStripMelee(wep, ply)
+local function ShouldStripMelee(wep, ply)
     if SERVER and wep:GetNextDropCheck() < CurTime() then
         if ply:OnGround() or ply:WaterLevel() ~= 0 then
             ply:StripWeapon(meleeWeaponString)
@@ -237,6 +212,26 @@ function ShouldStripMelee(wep, ply)
     end
 end
 
+hook.Add("OnPlayerHitGround", "market_gardener__DropMeleeOnFall", function(ply, inWater, onFloater, speed)
+    if ply:HasWeapon(meleeWeaponString) then
+        owner:StripWeapon(meleeWeaponString)
+        owner:Give(jumperWeaponString)
+    end
+end)
 
+hook.Add("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath", function (ply)
+    if ply:HasWeapon(jumperWeaponString) then
+        owner:StripWeapon(meleeWeaponString)
+    end
+end)
 
+hook.Add("TTTBeginRound", "market_gardener__DropMeleeOnRoundEnd", function(result)
+    hook.Remove("TTTBeginRound", "market_gardener__DropMeleeOnRoundEnd")
+    hook.Remove("OnPlayerHitGround", "market_gardener__DropMeleeOnFall")
+end)
 
+hook.Add("DoPlayerDeath", "market_gardener__DropMeleeOnDeath", function (ply, attacker, dmg)
+    if ply:HasWeapon(meleeWeaponString) then
+        owner:StripWeapon(meleeWeaponString)
+    end
+end)

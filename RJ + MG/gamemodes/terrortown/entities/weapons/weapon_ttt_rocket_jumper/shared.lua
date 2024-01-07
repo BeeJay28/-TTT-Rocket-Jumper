@@ -124,15 +124,16 @@ function SWEP:PrimaryAttack()
         self:EmitSound(shootSound)
 
         self:SetNextPrimaryFire( CurTime() + self:SequenceDuration() + 0.1)
-        
-        AddHooksForAttack(ply)
-        ShouldDenyFallDamage = true
 
         HotswapWeapons(ply, jumperWeaponString, meleeWeaponString)
     end
 end 
 
-function GetAimedAtVector(ply)
+function SWEP:Equip(newOwner)
+    newOwner:SelectWeapon(jumperWeaponString)
+end
+
+local function GetAimedAtVector(ply)
     local worldShootPos = ply:GetShootPos()
     local viewTargetPos = ply:GetAimVector() * traceRange
     local tr = util.TraceLine({ 
@@ -145,7 +146,7 @@ function GetAimedAtVector(ply)
     return world_target_pos, tr.Fraction < 1
 end
 
-function spawnExplosion(explosionLocation)
+local function spawnExplosion(explosionLocation)
     local exp = ents.Create( "env_explosion" )
     exp:SetPos( explosionLocation )
     exp:Spawn()
@@ -153,60 +154,15 @@ function spawnExplosion(explosionLocation)
     exp:Fire( "Explode", 0, 0 )
 end
 
-function SWEP:Equip(newOwner)
-    newOwner:SelectWeapon(jumperWeaponString)
-end
-
-function HotswapWeapons(ply, old, new)
+local function HotswapWeapons(ply, old, new)
     ply:StripWeapon(old)
     ply:Give(new)
 end
 
-function SWEP:SetupDataTables()
-    self:NetworkVar("Float", 0, "NextFallDamageDenyCheck")
-end
-
-function SWEP:Initialize()
-    self:SetNextFallDamageDenyCheck( CurTime() )
-end
-
-function SWEP:Think()
-    if SERVER then
-        if ShouldDenyFallDamage and self:GetNextFallDamageDenyCheck() < CurTime() then
-            local ply = self:GetOwner()
-            if ply:OnGround() or ply:WaterLevel() ~= 0 then
-                RemoveFallDamageMitigation(ply)
-            end
-        end
-        self:SetNextFallDamageDenyCheck(CurTime() + FallDamageDenyCheckInterval)
+hook.Add("EntityTakeDamage", "rocket_jumper__NoFallDamage", function (target, dmgInfo)
+    if target:HasWeapon(meleeWeaponString) and dmgInfo:IsFallDamage() then
+        dmgInfo:SetDamage(0)
+    elseif (dmgInfo:GetInflictor():HasWeapon(meleeWeaponString) and dmgInfo:IsDamageType(DMG_CRUSH)) then
+        dmgInfo:SetDamage(0)
     end
-end
-
-function AddHooksForAttack(ply)
-    --BUG: On some maps you ocassionally take damage despite this hook. No fix in development as it happens quite rarely and inconsistently
-    hook.Add("EntityTakeDamage", "rocket_jumper__NoFallDamage", function (target, dmgInfo)
-        if (ply == target and dmgInfo:IsFallDamage()) then
-            RemoveFallDamageMitigation()
-            dmgInfo:SetDamage(0)
-        elseif (dmgInfo:GetInflictor() == ply and dmgInfo:IsDamageType(DMG_CRUSH)) then
-            dmgInfo:SetDamage(0)
-        end
-    end)
-
-    hook.Add("TTT2PostPlayerDeath", "rocketJumper__RemoveFallDamageMitigationPostDeath", function (victim, inflictor, attacker)
-        if (ply == victim) then
-            hook.Remove("TTT2PostPlayerDeath", "rocketJumper__RemoveFallDamageMitigationPostDeath")
-            RemoveFallDamageMitigation()
-        end
-    end)
-
-    hook.Add("TTTBeginRound", "rocketJumper__RemoveFallDamageMitigationRoundEnd", function (result)
-        hook.Remove("TTTBeginRound", "rocketJumper__RemoveFallDamageMitigationRoundEnd")
-        RemoveFallDamageMitigation()
-    end)
-end
-
-function RemoveFallDamageMitigation()
-    hook.Remove("EntityTakeDamage", "rocket_jumper__NoFallDamage")
-    ShouldDenyFallDamage = false
-end
+end)
