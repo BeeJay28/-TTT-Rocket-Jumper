@@ -2,32 +2,32 @@
 
 -- First some standard GMod stuff
 if SERVER then
-    AddCSLuaFile()
+	AddCSLuaFile()
 
-    resource.AddFile("materials/vgui/ttt/rocketjumper_icon.vmt")
+	resource.AddFile("materials/vgui/ttt/rocketjumper_icon.vmt")
 end
 
 -- Equipment menu information is only needed on the client
 if CLIENT then
 
-  -- Text shown in the equip menu
-    SWEP.EquipMenuData = {
-        type = "item_weapon",
-        name = "Rocket Jumper",
-        desc = "LMB: Launch into the air\nLMB again: Melee another player while midair to CRIT",
-    }
+	-- Text shown in the equip menu
+	SWEP.EquipMenuData = {
+		type = "item_weapon",
+		name = "Rocket Jumper",
+		desc = "LMB: Launch into the air\nLMB again: Melee another player while midair to CRIT",
+	}
 
-  -- Path to the icon material
-    SWEP.Icon = "vgui/ttt/rocketjumper_icon.vtf"
+	-- Path to the icon material
+	SWEP.Icon = "vgui/ttt/rocketjumper_icon.vtf"
 
-    SWEP.PrintName = "Rocket Jumper"
-    SWEP.Instructions = "LMB off the ground, melee another player while midair to CRIT"
+	SWEP.PrintName = "Rocket Jumper"
+	SWEP.Instructions = "LMB off the ground, melee another player while midair to CRIT"
 
-    SWEP.ViewModelFOV  = 65
-    SWEP.ViewModelFlip = false
+	SWEP.ViewModelFOV  = 65
+	SWEP.ViewModelFlip = false
 
-    SWEP.DrawAmmo = false
-    SWEP.DrawCrosshair = false
+	SWEP.DrawAmmo = false
+	SWEP.DrawCrosshair = false
 end
 
 
@@ -55,11 +55,6 @@ local shootSound = Sound( "Weapon_Crossbow.Single" )
 --- Parameters
 local thrustSpeed = 1000
 local traceRange = 200
-local FallDamageDenyCheckInterval = 0.1
-
---- Helper variables
-local ShouldDenyFallDamage = false
-local CollisionDmgFlagId = 0
 
 -- Make sure these two are equal to their lua-filenames
 local jumperWeaponString = "weapon_ttt_rocket_jumper"
@@ -106,63 +101,66 @@ SWEP.Spawnable = false
 SWEP.AdminSpawnable = true
 SWEP.ShouldDropOnDie = true
 
-
-function SWEP:PrimaryAttack()
-    if CLIENT then return end
-
-    local ply = self:GetOwner()
-
-    local world_target_pos, is_in_range = GetAimedAtVector(ply)
-
-    if is_in_range then
-        ply:SetVelocity(-ply:GetAimVector() * thrustSpeed)
-
-        spawnExplosion(world_target_pos)
-
-        self:SendWeaponAnim(ACT_RANGE_ATTACK_RPG)
-        ply:SetAnimation(PLAYER_ATTACK1)
-        self:EmitSound(shootSound)
-
-        self:SetNextPrimaryFire( CurTime() + self:SequenceDuration() + 0.1)
-
-        HotswapWeapons(ply, jumperWeaponString, meleeWeaponString)
-    end
-end 
-
-function SWEP:Equip(newOwner)
-    newOwner:SelectWeapon(jumperWeaponString)
-end
-
 local function GetAimedAtVector(ply)
-    local worldShootPos = ply:GetShootPos()
-    local viewTargetPos = ply:GetAimVector() * traceRange
-    local tr = util.TraceLine({ 
-        start = worldShootPos,
-        endpos = worldShootPos + viewTargetPos,
-        filter = ply,
-        mask = MASK_NPCSOLID_BRUSHONLY
-    })
-    local world_target_pos = worldShootPos + tr.Fraction * viewTargetPos
-    return world_target_pos, tr.Fraction < 1
+	local worldShootPos = ply:GetShootPos()
+	local viewTargetPos = ply:GetAimVector() * traceRange
+	local tr = util.TraceLine({
+		start = worldShootPos,
+		endpos = worldShootPos + viewTargetPos,
+		filter = ply,
+		mask = MASK_NPCSOLID_BRUSHONLY
+	})
+	local world_target_pos = worldShootPos + tr.Fraction * viewTargetPos
+	return world_target_pos, tr.Fraction < 1
 end
 
 local function spawnExplosion(explosionLocation)
-    local exp = ents.Create( "env_explosion" )
-    exp:SetPos( explosionLocation )
-    exp:Spawn()
-    exp:SetKeyValue( "iMagnitude", "0" )
-    exp:Fire( "Explode", 0, 0 )
+	local exp = ents.Create( "env_explosion" )
+	exp:SetPos( explosionLocation )
+	exp:Spawn()
+	exp:SetKeyValue( "iMagnitude", "0" )
+	exp:Fire( "Explode", 0, 0 )
 end
 
 local function HotswapWeapons(ply, old, new)
-    ply:StripWeapon(old)
-    ply:Give(new)
+	ply:StripWeapon(old)
+	ply:Give(new)
+end
+
+local function IsJumping(ply)
+	return IsValid(ply) and ply:IsPlayer() and (ply:HasWeapon(meleeWeaponString) or ply:HasWeapon(jumperWeaponString))
+end
+
+function SWEP:PrimaryAttack()
+	if CLIENT then return end
+	local ply = self:GetOwner()
+
+	local world_target_pos, is_in_range = GetAimedAtVector(ply)
+
+	if is_in_range then
+		ply:SetVelocity(-ply:GetAimVector() * thrustSpeed)
+
+		spawnExplosion(world_target_pos)
+
+		self:SendWeaponAnim(ACT_RANGE_ATTACK_RPG)
+		ply:SetAnimation(PLAYER_ATTACK1)
+		self:EmitSound(shootSound)
+
+		self:SetNextPrimaryFire( CurTime() + self:SequenceDuration() + 0.1)
+
+		HotswapWeapons(ply, jumperWeaponString, meleeWeaponString)
+	end
+end
+
+function SWEP:Equip(newOwner)
+	newOwner:SelectWeapon(jumperWeaponString)
 end
 
 hook.Add("EntityTakeDamage", "rocket_jumper__NoFallDamage", function (target, dmgInfo)
-    if target:HasWeapon(meleeWeaponString) and dmgInfo:IsFallDamage() then
-        dmgInfo:SetDamage(0)
-    elseif (dmgInfo:GetInflictor():HasWeapon(meleeWeaponString) and dmgInfo:IsDamageType(DMG_CRUSH)) then
-        dmgInfo:SetDamage(0)
-    end
+	local inflictor = dmgInfo:GetInflictor()
+
+	if (IsJumping(target) and dmgInfo:IsFallDamage())
+	or (IsJumping(inflictor) and dmgInfo:IsDamageType(DMG_CRUSH)) then
+		dmgInfo:SetDamage(0)
+	end
 end)

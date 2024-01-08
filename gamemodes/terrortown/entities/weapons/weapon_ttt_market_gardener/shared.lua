@@ -7,9 +7,8 @@ if SERVER then
 	AddCSLuaFile()
 end
 
- -- Equipment menu information is only needed on the client
+-- Equipment menu information is only needed on the client
 if CLIENT then
-
 	SWEP.PrintName = "Market Gardener"
 	SWEP.Instructions = "Hit a player while airborne from the Rocket Jumper to CRIT"
 
@@ -23,10 +22,10 @@ end
 
 
 
- -- Always derive from weapon_tttbase.
+-- Always derive from weapon_tttbase.
 SWEP.Base				= "weapon_tttbase"
 
- --- Standard GMod values
+--- Standard GMod values
 
 SWEP.HoldType			= "melee"
 
@@ -44,7 +43,7 @@ SWEP.WorldModel = "models/weapons/w_crowbar.mdl"
 SWEP.Primary.HitSound = Sound("Critical_Hit.mp3")
 SWEP.Primary.MissSound = Sound("Weapon_Crowbar.Single")
 
- -- Make sure these two are equal to their lua-filenames
+-- Make sure these two are equal to their lua-filenames
 local jumperWeaponString = "weapon_ttt_rocket_jumper"
 local meleeWeaponString = "weapon_ttt_market_gardener"
 
@@ -53,9 +52,6 @@ local hitboxRange = 120
 local damageValue = 1000
 local dropCheckInterval = 0.1
 local meleeSwingDelay = 0.05
-
--- helper params
-local owner = nil
 
 --- TTT config values
 
@@ -99,17 +95,6 @@ SWEP.AutoSwitchFrom = false
 SWEP.Spawnable = false
 SWEP.AdminSpawnable = false
 SWEP.ShouldDropOnDie = false
-
-local function ShouldStripMelee(wep, ply)
-	if SERVER and wep:GetNextDropCheck() < CurTime() then
-		if ply:OnGround() or ply:WaterLevel() ~= 0 then
-			ply:StripWeapon(meleeWeaponString)
-			ply:Give(jumperWeaponString)
-		else
-			wep:SetNextDropCheck(CurTime() + dropCheckInterval)
-		end
-	end
-end
 
 function SWEP:PrimaryAttack()
 	local ply = self:GetOwner()
@@ -176,40 +161,42 @@ function SWEP:Equip(newOwner)
 	newOwner:SelectWeapon(meleeWeaponString)
 end
 
-function SWEP:SetupDataTables()
-	self:NetworkVar("Float", 0, "NextDropCheck")
-end
-
 function SWEP:Initialize()
-	self:SetNextDropCheck(CurTime() + 0.1)
+	self:NextThink(CurTime() + dropCheckInterval)
 end
 
 if SERVER then
 	function SWEP:Think()
-		ShouldStripMelee(self, owner)
+		local ply = self:GetOwner()
+		if IsValid(ply) and ply:OnGround() or ply:WaterLevel() ~= 0 then
+			ply:StripWeapon(meleeWeaponString)
+			ply:Give(jumperWeaponString)
+		else
+			self:NextThink(CurTime() + dropCheckInterval)
+		end
 	end
 
 	function SWEP:Deploy()
 		self:SetNextPrimaryFire(CurTime() + dropCheckInterval * 3)
 	end
+
+	hook.Add("OnPlayerHitGround", "market_gardener__DropMeleeOnFall", function(ply, inWater, onFloater, speed)
+		local wep = ply:GetActiveWeapon()
+		if IsValid(wep) and wep:GetClass() == meleeWeaponString and ply:IsPlayer() then
+			ply:StripWeapon(meleeWeaponString)
+			ply:Give(jumperWeaponString)
+		end
+	end)
+
+	hook.Add("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath", function (ply)
+		if ply:HasWeapon(jumperWeaponString) then
+			ply:StripWeapon(meleeWeaponString)
+		end
+	end)
+
+	hook.Add("DoPlayerDeath", "market_gardener__DropMeleeOnDeath", function (ply, attacker, dmg)
+		if ply:HasWeapon(meleeWeaponString) then
+			ply:StripWeapon(meleeWeaponString)
+		end
+	end)
 end
-
-hook.Add("OnPlayerHitGround", "market_gardener__DropMeleeOnFall", function(ply, inWater, onFloater, speed)
-	local wep = ply:GetActiveWeapon()
-	if IsValid(wep) and wep:GetClass() == meleeWeaponString then
-		owner:StripWeapon(meleeWeaponString)
-		owner:Give(jumperWeaponString)
-	end
-end)
-
-hook.Add("PlayerSilentDeath", "market_gardener__DropMeleeOnSilentDeath", function (ply)
-	if ply:HasWeapon(jumperWeaponString) then
-		owner:StripWeapon(meleeWeaponString)
-	end
-end)
-
-hook.Add("DoPlayerDeath", "market_gardener__DropMeleeOnDeath", function (ply, attacker, dmg)
-	if ply:HasWeapon(meleeWeaponString) then
-		owner:StripWeapon(meleeWeaponString)
-	end
-end)
