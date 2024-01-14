@@ -1,5 +1,10 @@
 ---- Rocket Jumper SWEP
 
+--- Credits:
+-- BeeJay28 (Rocket-Jump connoisseur, Main Developer)
+-- James (Good friend, helped me test a lot, knows his "source" stuff better than me)
+-- EntranceJew (Nice guy, contributed quality of life changes, bugfix, reload-mechanic and some Gmod education to yours truly)
+
 -- First some standard GMod stuff
 if SERVER then
 	AddCSLuaFile()
