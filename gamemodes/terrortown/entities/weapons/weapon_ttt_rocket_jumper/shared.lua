@@ -68,13 +68,13 @@ local hitboxRange = 120
 local damageValue = 1000
 local dropCheckInterval = 0.1
 local meleeSwingDelay = 0.05
-local swap_speed = 4
-local deploy_urgency = 100
+local swapSpeed = 4
+local deployUrgency = 100
 local gardenerExtents = 10
 local meleeForce = 5
 local deployLag = 3
 
--- Make sure these two are equal to their lua-filenames
+-- Make sure this is equal to their lua-filenames
 local jumperWeaponString = "weapon_ttt_rocket_jumper"
 
 
@@ -127,8 +127,8 @@ local function GetAimedAtVector(ply)
 		filter = ply,
 		mask = MASK_NPCSOLID_BRUSHONLY
 	})
-	local world_target_pos = worldShootPos + tr.Fraction * viewTargetPos
-	return world_target_pos, tr.Fraction < 1
+	local worldTargetPos = worldShootPos + tr.Fraction * viewTargetPos
+	return worldTargetPos, tr.Fraction < 1
 end
 
 local function spawnExplosion(explosionLocation)
@@ -182,7 +182,6 @@ end
 
 -- jumper attack
 function SWEP:PrimaryAttack()
-	-- if CLIENT and not IsFirstTimePredicted() then return end
 	if self:GetIsJumper() then
 		self:JumperFire()
 	else
@@ -199,13 +198,13 @@ end
 function SWEP:JumperFire()
 	local ply = self:GetOwner()
 
-	local world_target_pos, is_in_range = GetAimedAtVector(ply)
+	local worldTargetPos, isInRange = GetAimedAtVector(ply)
 
-	if is_in_range then
+	if isInRange then
 		if SERVER then
 			ply:SetVelocity(-ply:GetAimVector() * thrustSpeed)
 
-			spawnExplosion(world_target_pos)
+			spawnExplosion(worldTargetPos)
 
 			self:EmitSound(shootSound)
 
@@ -294,8 +293,9 @@ function SWEP:BecomeGardener()
 
 	self:SetModel( self.WorldModel1 )
 	self.WorldModel = self.WorldModel1
-	self:SendViewModelAnim( ACT_VM_DRAW, VM_JUMPER, -swap_speed)
-	self:SendViewModelAnim( ACT_VM_DRAW , VM_GARDEN, swap_speed)
+    -- lil hack to simulate jumper holster anim
+	self:SendViewModelAnim( ACT_VM_DRAW, VM_JUMPER, -swapSpeed)
+	self:SendViewModelAnim( ACT_VM_DRAW , VM_GARDEN, swapSpeed)
 	self:SetHoldType("melee")
 	if CLIENT then
 		self:RefreshTTT2HUDHelp()
@@ -309,8 +309,8 @@ function SWEP:BecomeJumper()
 
 	self:SetModel( self.WorldModel0 )
 	self.WorldModel = self.WorldModel0
-	self:SendViewModelAnim( ACT_VM_HOLSTER, VM_GARDEN, swap_speed)
-	self:SendViewModelAnim( ACT_VM_DRAW, VM_JUMPER, swap_speed)
+	self:SendViewModelAnim( ACT_VM_HOLSTER, VM_GARDEN, swapSpeed)
+	self:SendViewModelAnim( ACT_VM_DRAW, VM_JUMPER, swapSpeed)
 	self:SetHoldType("rpg")
 	if CLIENT then
 		self:RefreshTTT2HUDHelp()
@@ -331,9 +331,9 @@ function SWEP:Deploy()
 	end
 
 	if self:GetIsJumper() then
-		self:SendViewModelAnim( ACT_VM_HOLSTER, VM_GARDEN, swap_speed * deploy_urgency )
+		self:SendViewModelAnim( ACT_VM_HOLSTER, VM_GARDEN, swapSpeed * deployUrgency )
 	else
-		self:SendViewModelAnim( ACT_VM_DRAW, VM_JUMPER, -swap_speed * deploy_urgency )
+		self:SendViewModelAnim( ACT_VM_DRAW, VM_JUMPER, -swapSpeed * deployUrgency )
 	end
 
 	return true
@@ -392,7 +392,7 @@ end
 function SWEP:RefreshTTT2HUDHelp()
 	self.HUDHelp = {
 		bindingLines = {},
-		max_length = 0
+		maxLength = 0
 	}
 
 	if not self:GetIsJumper() then
